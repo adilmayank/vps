@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import pandas as pd
+import copy
 
 url = r"C:/tesst.html"
 page = open(url)
@@ -27,7 +28,17 @@ for (nam, add, num) in zip(contact_name, contact_address, contact_number):
         customer_details["fName"].append(fName)
         customer_details["lName"].append(lName)
         customer_details["address"].append(address)
-        customer_details["phoneNumber"].append(number)
 
-#print(customer_details)
+        number_chipped = copy.copy(number)
+        to_replace = ")("
+        for character in to_replace:
+            number_chipped = number_chipped.replace(character, "")
+
+        if number_chipped[0] != '0':
+            number_chipped = "0"+number_chipped
+
+        customer_details["phoneNumber"].append(number_chipped)
+
+
+print(customer_details)
 customer_details_df = pd.DataFrame(customer_details).to_csv("D:/Customer_data.csv", mode="a", header=True)
