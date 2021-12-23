@@ -1,8 +1,8 @@
 from bs4 import BeautifulSoup
 import pandas as pd
-import copy
 
-url = r"C:/tesst.html"
+#url provides a link for local html file for scraping.
+url = r"INPUT_FILE.html"
 page = open(url)
 
 soup = BeautifulSoup(page.read(), "html.parser")
@@ -11,10 +11,11 @@ contact_name = soup.find_all("td", {"class": "contactName"})
 contact_address = soup.find_all("td", {"class": "contactAddress"})
 contact_number = soup.find_all("td", {"class": "phoneNumber"})
 
-customer_details = {"fName": [],
-                    "lName": [],
-                    "address": [],
-                    "phoneNumber": []}
+customer_details = {"First_name": [],
+                    "Last_name": [],
+                    "Address": [],
+                    "Phone_Number": [],
+                    "DNCR_IND": []}
 
 for (nam, add, num) in zip(contact_name, contact_address, contact_number):
     name = nam.text.strip().split()
@@ -24,21 +25,20 @@ for (nam, add, num) in zip(contact_name, contact_address, contact_number):
     number = num.text.strip().split()
     number = "".join(number)
 
-    if len(number) != 0 and number[0] != "^":
-        customer_details["fName"].append(fName)
-        customer_details["lName"].append(lName)
-        customer_details["address"].append(address)
+    if len(number) != 0:
+        customer_details["First_name"].append(fName)
+        customer_details["Last_name"].append(lName)
+        customer_details["Address"].append(address)
+        if number[0] == "^":
+            customer_details["DNCR_IND"].append("Y")
+        else:
+            customer_details["DNCR_IND"].append("N")
 
-        number_chipped = copy.copy(number)
-        to_replace = ")("
+        to_replace = ")^("
         for character in to_replace:
-            number_chipped = number_chipped.replace(character, "")
+            number = number.replace(character, "")
 
-        if number_chipped[0] != '0':
-            number_chipped = "0"+number_chipped
+        customer_details["Phone_Number"].append(number)
 
-        customer_details["phoneNumber"].append(number_chipped)
-
-
-print(customer_details)
-customer_details_df = pd.DataFrame(customer_details).to_csv("D:/Customer_data.csv", mode="a", header=True)
+print(customer_details) # only for confirmation purposes
+customer_details_df = pd.DataFrame(customer_details).to_excel("OUTPUT_FILE.xlsx", header=True) #prints an excel file from pandas DataFrame.
