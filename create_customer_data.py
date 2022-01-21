@@ -1,73 +1,71 @@
-from bs4 import BeautifulSoup
 import pandas as pd
+from bs4 import BeautifulSoup
 
+class Scrape:
+    def __init__(self):
+        pass
+    def scrape_contact_deatils_from_html(self, path, number_of_files=1):
 
-def create_customer_details_table(input_file, output_file):
+        def scrape_details(file=None, header=None):
 
-    url = r"D:/rp_scraping/input/{}.html".format(input_file)
-    file = open(url)
+            opened_file = open(file)
 
-    customer_details = {"First Name": [],
-                        "Last Name": [],
-                        "Address": [],
-                        "Phone Number": [],
-                        "DNCR_IND": [],
-                        "Bedrooms": [],
-                        "Bathrooms": [],
-                        "Car Space": [],
-                        "Est. Land Area(m2)": []}
+            customer_details = {"First Name": [],
+                                "Last Name": [],
+                                "Address": [],
+                                "Phone Number": [],
+                                "DNCR_IND": []}
 
-    soup = BeautifulSoup(file, "html.parser")
+            soup = BeautifulSoup(opened_file, "html.parser")
 
-    summaryListItems = soup.find_all("div", {"class": "summaryListItem"})
-    for i in range(len(summaryListItems)):
-        content = summaryListItems[i].find("div", {"class": "content"})
-        iconContainer = summaryListItems[i].find("ul", {"class": "iconContainer"})
-        heading = summaryListItems[i].find("h2")
-        attribute_list = iconContainer.text.strip().split()
-        content_text = content.text
+            summary_list_items = soup.find_all("div", {"class": "summaryListItem"})
 
-        if content_text.strip() != "No information available.":
+            for item in summary_list_items:
+                data_table = item.find("table")
+                if data_table is not None:
+                    number_of_rows = len(data_table.find_all("tr")) - 1
+                    for i in range(number_of_rows):
 
-            contact_name = content.find_all("td", {"class": "contactName"})
-            #contact_address = content.find_all("td", {"class": "contactAddress"})
-            contact_address = (" ".join(heading.text.strip().split()).replace(",", "")).upper()
-            contact_number = content.find_all("td", {"class": "phoneNumber"})
+                        contact_number = data_table.find_all("td", {"class": "phoneNumber"})[i].text.strip().split()
+                        if len(contact_number) != 0:
+                            contact_number_proper = "".join(contact_number)
+                            to_replace = "()"
+                            for character in to_replace:
+                                contact_number_proper = contact_number_proper.replace(character, "")            # removes paranthesis from the contact number
+                        else:
+                            continue                                                                            # passes the iteration if contact number field is empty
 
+                        contact_name= data_table.find_all("td", {"class": "contactName"})[i].text.split()
+                        contact_address = data_table.find_all("td", {"class": "contactAddress"})[i].text.split()
+                        DNCR_IND = ""
 
-            for (nam, num) in zip(contact_name, contact_number):
-                name = nam.text.strip().split()
-                fName = name[0]
-                lName = name[1]
-                address = contact_address
-                number = num.text.strip().split()
-                number = "".join(number)
-                contact_bedroom = attribute_list[0]
-                contact_bathroom = attribute_list[1]
-                contact_car_space = attribute_list[2]
-                contact_lot_area = attribute_list[4].replace("m2", "")
+                        first_name = contact_name[0]
+                        last_name = contact_name[1]
+                        contact_address_proper = " ".join(contact_address)
 
-                if len(number) != 0:
+                        if (contact_number_proper[0] == "^"):
+                            DNCR_IND = "Y"
+                            contact_number_proper = contact_number_proper.replace("^", "")
+                        else:
+                            DNCR_IND = "N"
 
-                    customer_details["First Name"].append(fName)
-                    customer_details["Last Name"].append(lName)
-                    customer_details["Address"].append(address)
-                    if number[0] == "^":
-                        customer_details["DNCR_IND"].append("Y")
-                    else:
-                        customer_details["DNCR_IND"].append("N")
+                        customer_details["First Name"].append(first_name)
+                        customer_details["Last Name"].append(last_name)
+                        customer_details["Address"].append(contact_address_proper)
+                        customer_details["Phone Number"].append(contact_number_proper)
+                        customer_details["DNCR_IND"].append(DNCR_IND)
 
-                    to_replace = ")^("
-                    for character in to_replace:
-                        number = number.replace(character, "")
+            pd.DataFrame(customer_details).to_csv(f"E:/rp_scraping/test.csv",
+                                                  header=header,
+                                                  index=False,
+                                                  mode="a")
 
-                    customer_details["Phone Number"].append(number)
-                    customer_details["Bedrooms"].append(contact_bedroom)
-                    customer_details["Bathrooms"].append(contact_bathroom)
-                    customer_details["Car Space"].append(contact_car_space)
-                    customer_details["Est. Land Area(m2)"].append(contact_lot_area)
-
-    customer_details_df = pd.DataFrame(customer_details).to_csv(f"D:/rp_scraping/output/{output_file}.csv",
-                                                                header=True,
-                                                                index=False,
-                                                                mode="a")
+        
+        # first_file and subsequent_file name should be updated with the current postal_code in the source code.
+        
+        first_file = path + rf"\3340_customer_{1}.html"                             # creates a csv with first file with headers.
+        scrape_details(first_file, header=True)
+        if (number_of_files > 1):                                                   # append data from subsequent files if number of files is greater than 1.
+            for file_number in range(2, number_of_files + 1):
+                subsequent_file = path + rf"\3340_customer_{file_number}.html"
+                scrape_details(subsequent_file, header=False)
